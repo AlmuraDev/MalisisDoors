@@ -35,8 +35,8 @@ ext.url = 'http://github.com/Ordinastie/MalisisDoors'
 
 dependencies
 {
-	//compile 'net.malisis:malisiscore:1.10.2-4.2.8:dev'
-	compile files('../MalisisCore/build/libs/malisiscore-1.12.2-6.3.0-dev.jar')
+	//compile 'net.malisis:malisiscore:1.12.2-6.3.0:dev'
+	compile files('libs/malisiscore-1.12.2-6.3.0.jar')
 }
 
 

@@ -32,6 +32,8 @@ import net.malisis.doors.tileentity.DoorTileEntity;
 
 import org.lwjgl.input.Keyboard;
 
+import java.io.IOException;
+
 /**
  * @author Ordinastie
  *
@@ -62,8 +64,7 @@ public class DigicodeGui extends MalisisGui
 	}
 
 	@Override
-	protected void keyTyped(char keyChar, int keyCode)
-	{
+	protected void keyTyped(char keyChar, int keyCode) throws IOException {
 		super.keyTyped(keyChar, keyCode);
 
 		if (keyCode == Keyboard.KEY_RETURN || keyCode == Keyboard.KEY_NUMPADENTER)

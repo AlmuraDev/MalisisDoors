@@ -41,6 +41,7 @@ import net.malisis.doors.item.DoorItem;
 import net.malisis.doors.movement.IDoorMovement;
 import net.malisis.doors.sound.IDoorSound;
 import net.minecraft.block.Block;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemDoor;
 import net.minecraft.item.ItemStack;
@@ -308,6 +309,84 @@ public class DoorFactoryTileEntity extends TileEntity implements IDirectInventor
 	public NBTTagCompound getUpdateTag()
 	{
 		return writeToNBT(new NBTTagCompound());
+	}
+
+	@Override public int getSizeInventory() {
+		return getInventory() != null ? getInventory().getSize() : 0;
+	}
+
+	@Override public boolean isEmpty() {
+		return getInventory() == null || getInventory().isEmpty();
+	}
+
+	@Override public ItemStack getStackInSlot(int index) {
+		return getInventory() != null ? getInventory().getItemStack(index) : ItemStack.EMPTY;
+	}
+
+	@Override public ItemStack decrStackSize(int index, int count) {
+		return getInventory() != null ? (new ItemUtils.ItemStackSplitter(getInventory().getItemStack(index))).split(count) : ItemStack.EMPTY;
+	}
+
+	@Override public ItemStack removeStackFromSlot(int index) {
+		if (getInventory() == null || getInventory().getSlot(index) == null)
+			return ItemStack.EMPTY;
+
+		return getInventory().getSlot(index).extract();
+	}
+
+	@Override public void setInventorySlotContents(int index, ItemStack stack) {
+		MalisisInventory inventory = getInventory();
+		if (inventory != null)
+			inventory.setItemStack(index, stack);
+	}
+
+	@Override public int getInventoryStackLimit() {
+		return getInventory() != null ? getInventory().getInventoryStackLimit() : 0;
+	}
+
+	@Override public boolean isUsableByPlayer(EntityPlayer player) {
+		return true;
+	}
+
+	@Override public void openInventory(EntityPlayer player) {
+
+	}
+
+	@Override public void closeInventory(EntityPlayer player) {
+
+	}
+
+	@Override public boolean isItemValidForSlot(int index, ItemStack stack) {
+		MalisisInventory inventory = getInventory();
+		if (inventory == null)
+			return false;
+		MalisisSlot slot = inventory.getSlot(index);
+		return slot != null && slot.isItemValid(stack);
+	}
+
+	@Override public int getField(int id) {
+		return 0;
+	}
+
+	@Override public void setField(int id, int value) {
+
+	}
+
+	@Override public int getFieldCount() {
+		return 0;
+	}
+
+	@Override public void clear() {
+		for (MalisisInventory inventory : getInventories())
+			inventory.emptyInventory();
+	}
+
+	@Override public String getName() {
+		return getInventory() != null ? getInventory().getName() : null;
+	}
+
+	@Override public boolean hasCustomName() {
+		return getInventory() != null && getInventory().hasCustomName();
 	}
 
 	private class DoorFactorySlot extends MalisisSlot
