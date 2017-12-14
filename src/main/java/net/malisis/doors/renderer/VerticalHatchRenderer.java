@@ -66,7 +66,7 @@ public class VerticalHatchRenderer extends DoorRenderer
 	{
 		if (renderType == RenderType.BLOCK)
 		{
-			if (!Door.isTop(blockState))
+			if (!Door.isTop(blockState) && tileEntity != null)
 			{
 				setTileEntity();
 				setup();
