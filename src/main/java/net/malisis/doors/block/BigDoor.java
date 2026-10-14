@@ -42,8 +42,10 @@ import net.malisis.core.util.TileEntityUtils;
 import net.malisis.core.util.chunkcollision.ChunkCollision;
 import net.malisis.core.util.chunkcollision.IChunkCollidable;
 import net.malisis.doors.MalisisDoors;
+import net.malisis.doors.bigdoors.BigDoorSettings;
 import net.malisis.doors.renderer.BigDoorRenderer;
 import net.malisis.doors.tileentity.BigDoorTileEntity;
+import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.SoundType;
 import net.minecraft.block.material.Material;
@@ -111,7 +113,11 @@ public class BigDoor extends MalisisBlock implements ITileEntityProvider, IChunk
 
 		BigDoorTileEntity te = TileEntityUtils.getTileEntity(BigDoorTileEntity.class, world, pos);
 		if (te != null)
+		{
 			te.setFrameState(MBlockState.fromNBT(stack.getTagCompound()));
+			//settings set in the door factory
+			BigDoorSettings.applyFromItem(stack, te);
+		}
 	}
 
 	@Override
@@ -121,11 +127,26 @@ public class BigDoor extends MalisisBlock implements ITileEntityProvider, IChunk
 			return true;
 
 		BigDoorTileEntity te = TileEntityUtils.getTileEntity(BigDoorTileEntity.class, world, pos);
-		if (te == null)
+		if (te == null || !BigDoorSettings.canUseByHand(te))
 			return true;
 
 		te.openOrCloseDoor();
 		return true;
+	}
+
+	/**
+	 * Redstone, only for the doors set in the door factory: big doors never reacted to redstone, so existing ones keep behaving the same.
+	 */
+	@Override
+	public void neighborChanged(IBlockState state, World world, BlockPos pos, Block neighbor, BlockPos fromPos)
+	{
+		BigDoorTileEntity te = TileEntityUtils.getTileEntity(BigDoorTileEntity.class, world, pos);
+		if (te == null || !te.hasCustomSettings() || !BigDoorSettings.reactsToRedstone(te))
+			return;
+
+		boolean powered = world.isBlockPowered(pos);
+		if (powered || neighbor.getDefaultState().canProvidePower())
+			te.setPowered(powered);
 	}
 
 	@Override

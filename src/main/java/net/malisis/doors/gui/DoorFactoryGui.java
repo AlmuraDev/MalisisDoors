@@ -58,6 +58,7 @@ import net.malisis.core.util.TileEntityUtils;
 import net.malisis.doors.DoorDescriptor.RedstoneBehavior;
 import net.malisis.doors.DoorRegistry;
 import net.malisis.doors.MalisisDoors;
+import net.malisis.doors.bigdoors.BigDoorSettings;
 import net.malisis.doors.network.DoorFactoryMessage;
 import net.malisis.doors.tileentity.DoorFactoryTileEntity;
 import net.minecraft.client.resources.I18n;
@@ -251,6 +252,15 @@ public class DoorFactoryGui extends MalisisGui
 		dcContainer.add(digicode);
 
 		return dcContainer;
+	}
+
+	//big doors have their own movement and are already double doors: those settings don't apply to them
+	@Override
+	public void update(int mouseX, int mouseY, float partialTick)
+	{
+		boolean bigDoor = !tileEntity.isCreate() && BigDoorSettings.isBigDoor(tileEntity.doorEditSlot.getItemStack());
+		selDoorMovement.setEnabled(!bigDoor);
+		cbDoubleDoor.setEnabled(!bigDoor);
 	}
 
 	@Override

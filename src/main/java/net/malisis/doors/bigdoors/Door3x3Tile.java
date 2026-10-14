@@ -24,9 +24,11 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 
 @Syncable("TileEntity")
-public class Door3x3Tile extends DoorTileEntity
+public class Door3x3Tile extends DoorTileEntity implements BigDoorSettings.IConfigurable
 {
 	private IBlockState frameState;
+	/** Whether the settings were set by the door factory (see {@link BigDoorSettings}). */
+	private boolean customSettings;
 
 	public Door3x3Tile()
 	{
@@ -56,6 +58,25 @@ public class Door3x3Tile extends DoorTileEntity
 	{
 		if (state != null)
 			frameState = state;
+	}
+
+	@Override
+	public boolean hasCustomSettings()
+	{
+		return customSettings;
+	}
+
+	@Override
+	public void setCustomSettings(boolean custom)
+	{
+		customSettings = custom;
+	}
+
+	//the whole 3x3 door, not a single door's area
+	@Override
+	protected boolean hasPlayer()
+	{
+		return BigDoorSettings.hasPlayerNear(this, getRenderBoundingBox());
 	}
 
 	@Override
@@ -118,6 +139,7 @@ public class Door3x3Tile extends DoorTileEntity
 		NBTTagCompound nbt = new NBTTagCompound();
 		MBlockState.toNBT(nbt, this.frameState);
 		stack.setTagCompound(nbt);
+		BigDoorSettings.writeToDrop(stack, this);
 		return stack;
 	}
 
@@ -126,6 +148,7 @@ public class Door3x3Tile extends DoorTileEntity
 	{
 		super.readFromNBT(tag);
 		frameState = MoreObjects.firstNonNull(MBlockState.fromNBT(tag), Blocks.QUARTZ_BLOCK.getDefaultState());
+		customSettings = tag.getBoolean("customSettings");
 	}
 
 	@Override
@@ -133,6 +156,7 @@ public class Door3x3Tile extends DoorTileEntity
 	{
 		super.writeToNBT(tag);
 		MBlockState.toNBT(tag, frameState);
+		tag.setBoolean("customSettings", customSettings);
 
 		return tag;
 	}

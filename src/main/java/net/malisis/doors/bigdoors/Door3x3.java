@@ -88,7 +88,11 @@ public class Door3x3 extends MalisisBlock implements ITileEntityProvider, IChunk
 
 		Door3x3Tile te = TileEntityUtils.getTileEntity(Door3x3Tile.class, world, pos);
 		if (te != null)
+		{
 			te.setFrameState(MBlockState.fromNBT(itemStack.getTagCompound()));
+			//settings set in the door factory
+			BigDoorSettings.applyFromItem(itemStack, te);
+		}
 	}
 
 	@Override
@@ -98,7 +102,7 @@ public class Door3x3 extends MalisisBlock implements ITileEntityProvider, IChunk
 			return true;
 
 		Door3x3Tile te = TileEntityUtils.getTileEntity(Door3x3Tile.class, world, pos);
-		if (te == null)
+		if (te == null || !BigDoorSettings.canUseByHand(te))
 			return true;
 
 		te.openOrCloseDoor();
@@ -183,7 +187,7 @@ public class Door3x3 extends MalisisBlock implements ITileEntityProvider, IChunk
 	public void neighborChanged(IBlockState state, World world, BlockPos pos, Block neighbor, BlockPos fromPos)
 	{
 		Door3x3Tile te = TileEntityUtils.getTileEntity(Door3x3Tile.class, world, pos);
-		if (te == null)
+		if (te == null || !BigDoorSettings.reactsToRedstone(te))
 			return;
 
 		boolean powered = world.isBlockPowered(pos);
