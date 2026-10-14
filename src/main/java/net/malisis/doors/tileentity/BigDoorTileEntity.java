@@ -35,6 +35,7 @@ import net.malisis.core.util.syncer.Syncable;
 import net.malisis.doors.DoorDescriptor;
 import net.malisis.doors.DoorRegistry;
 import net.malisis.doors.DoorState;
+import net.malisis.doors.bigdoors.BigDoorSettings;
 import net.malisis.doors.movement.CarriageDoorMovement;
 import net.malisis.doors.sound.BigDoorSound;
 import net.minecraft.block.state.IBlockState;
@@ -50,9 +51,11 @@ import net.minecraft.util.math.BlockPos;
  *
  */
 @Syncable("TileEntity")
-public class BigDoorTileEntity extends DoorTileEntity
+public class BigDoorTileEntity extends DoorTileEntity implements BigDoorSettings.IConfigurable
 {
 	private IBlockState frameState;
+	/** Whether the settings were set by the door factory (see {@link BigDoorSettings}). */
+	private boolean customSettings;
 
 	public BigDoorTileEntity()
 	{
@@ -69,6 +72,25 @@ public class BigDoorTileEntity extends DoorTileEntity
 	public IBlockState getFrameState()
 	{
 		return frameState;
+	}
+
+	@Override
+	public boolean hasCustomSettings()
+	{
+		return customSettings;
+	}
+
+	@Override
+	public void setCustomSettings(boolean custom)
+	{
+		customSettings = custom;
+	}
+
+	//the whole big door, not a single door's area
+	@Override
+	protected boolean hasPlayer()
+	{
+		return BigDoorSettings.hasPlayerNear(this, getRenderBoundingBox());
 	}
 
 	public void setFrameState(IBlockState state)
@@ -136,6 +158,7 @@ public class BigDoorTileEntity extends DoorTileEntity
 		NBTTagCompound nbt = new NBTTagCompound();
 		MBlockState.toNBT(nbt, frameState);
 		itemStack.setTagCompound(nbt);
+		BigDoorSettings.writeToDrop(itemStack, this);
 		return itemStack;
 	}
 
@@ -151,6 +174,7 @@ public class BigDoorTileEntity extends DoorTileEntity
 		super.writeToNBT(nbt);
 
 		MBlockState.toNBT(nbt, frameState);
+		nbt.setBoolean("customSettings", customSettings);
 		return nbt;
 	}
 
@@ -160,5 +184,6 @@ public class BigDoorTileEntity extends DoorTileEntity
 		super.readFromNBT(nbt);
 
 		frameState = MoreObjects.firstNonNull(MBlockState.fromNBT(nbt), Blocks.QUARTZ_BLOCK.getDefaultState());
+		customSettings = nbt.getBoolean("customSettings");
 	}
 }

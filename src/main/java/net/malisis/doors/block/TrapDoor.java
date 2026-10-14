@@ -85,7 +85,7 @@ public class TrapDoor extends BlockTrapDoor implements IBoundingBox, IComponentP
 		setHardness(desc.getHardness());
 		setSoundType(desc.getSoundType());
 		setName(desc.getRegistryName());
-		setUnlocalizedName(desc.getUnlocalizedName());
+		setTranslationKey(desc.getUnlocalizedName());
 
 		setCreativeTab(desc.getTab());
 

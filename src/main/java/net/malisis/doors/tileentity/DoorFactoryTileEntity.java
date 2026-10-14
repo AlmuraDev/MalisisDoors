@@ -35,6 +35,7 @@ import net.malisis.doors.DoorDescriptor;
 import net.malisis.doors.DoorDescriptor.RedstoneBehavior;
 import net.malisis.doors.DoorRegistry;
 import net.malisis.doors.MalisisDoors;
+import net.malisis.doors.bigdoors.BigDoorSettings;
 import net.malisis.doors.gui.DoorFactoryGui;
 import net.malisis.doors.item.CustomDoorItem;
 import net.malisis.doors.item.DoorItem;
@@ -213,7 +214,19 @@ public class DoorFactoryTileEntity extends TileEntity implements IDirectInventor
 		}
 		else
 		{
+			//the edited doors replace the whole output: wait until it's taken, so nothing is lost
+			if (!outputSlot.getItemStack().isEmpty())
+				return;
+
 			ItemStack doors = doorEditSlot.extract(ItemUtils.FULL_STACK);
+			if (BigDoorSettings.isBigDoor(doors))
+			{
+				//big doors only take the settings that apply to them (see BigDoorSettings)
+				BigDoorSettings.writeToItem(doors, buildDescriptor(null, null));
+				outputSlot.insert(doors);
+				return;
+			}
+
 			NBTTagCompound nbt = doors.getTagCompound();
 			if (nbt == null)
 				nbt = new NBTTagCompound();
@@ -333,7 +346,7 @@ public class DoorFactoryTileEntity extends TileEntity implements IDirectInventor
 		{
 			if (itemStack.getItem() == MalisisDoors.Items.verticalHatchItem)
 				return false;
-			return itemStack.getItem() instanceof DoorItem || itemStack.getItem() instanceof ItemDoor;
+			return itemStack.getItem() instanceof DoorItem || itemStack.getItem() instanceof ItemDoor || BigDoorSettings.isBigDoor(itemStack);
 		}
 	}
 }

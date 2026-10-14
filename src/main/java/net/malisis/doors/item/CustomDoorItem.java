@@ -72,7 +72,7 @@ public class CustomDoorItem extends DoorItem
 	{
 		super();
 		setRegistryName("customdoorItem");
-		setUnlocalizedName("custom_door");
+		setTranslationKey("custom_door");
 
 		this.maxStackSize = 64;
 		setCreativeTab(null);
@@ -116,7 +116,7 @@ public class CustomDoorItem extends DoorItem
 			return true;
 
 		IBlockState state = ItemUtils.getStateFromItemStack(itemStack);
-		return state != null && !state.getBlock().getUnlocalizedName().equals("tile.mixed_block")
+		return state != null && !state.getBlock().getTranslationKey().equals("tile.mixed_block")
 				&& state.getRenderType() == EnumBlockRenderType.MODEL;
 	}
 
