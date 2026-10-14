@@ -69,6 +69,7 @@ public class Door3x3 extends MalisisBlock implements ITileEntityProvider, IChunk
 		this.type = type;
 		setName(type.name);
 
+		setHardness(type.metal ? 5.0F : 3.0F);
 		setResistance(type.metal ? 200 : 10.0f);
 		setSoundType(type.metal ? SoundType.METAL : SoundType.WOOD);
 		setCreativeTab(MalisisDoors.tab);
