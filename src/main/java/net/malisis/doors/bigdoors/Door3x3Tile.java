@@ -91,7 +91,7 @@ public class Door3x3Tile extends DoorTileEntity
 	@Override
 	public boolean isPowered()
 	{
-		return getWorld().isBlockIndirectlyGettingPowered(getPos()) > 0;
+		return getWorld().getRedstonePowerFromNeighbors(getPos()) > 0;
 	}
 
 	@Override

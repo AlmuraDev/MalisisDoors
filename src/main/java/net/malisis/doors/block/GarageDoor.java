@@ -99,7 +99,7 @@ public class GarageDoor extends MalisisBlock implements ITileEntityProvider
 		if (te == null || te.isMoving())
 			return;
 
-		boolean powered = world.isBlockIndirectlyGettingPowered(pos) != 0;
+		boolean powered = world.getRedstonePowerFromNeighbors(pos) != 0;
 		if ((powered || neighborBlock.getDefaultState().canProvidePower()) && neighborBlock != this)
 			te.getTopDoor().setPowered(powered);
 	}

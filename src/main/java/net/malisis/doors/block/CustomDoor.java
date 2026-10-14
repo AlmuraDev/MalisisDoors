@@ -58,7 +58,7 @@ public class CustomDoor extends Door
 		setHardness(3.0F);
 		setSoundType(SoundType.WOOD);
 		setRegistryName(MalisisDoors.modid + ":customDoor");
-		setUnlocalizedName("customDoor");
+		setTranslationKey("customDoor");
 
 	}
 

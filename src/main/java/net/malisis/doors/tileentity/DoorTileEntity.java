@@ -181,7 +181,7 @@ public class DoorTileEntity extends TileEntity implements ITickable
 
 	public void updatePowered()
 	{
-		setPowered(getWorld().isBlockIndirectlyGettingPowered(pos) + getWorld().isBlockIndirectlyGettingPowered(pos.up()) != 0);
+		setPowered(getWorld().getRedstonePowerFromNeighbors(pos) + getWorld().getRedstonePowerFromNeighbors(pos.up()) != 0);
 		Syncer.sync(this, "power");
 	}
 

@@ -104,7 +104,7 @@ public class FenceGate extends BlockFenceGate implements IComponentProvider, IRe
 		setResistance(5.0F);
 		setSoundType(SoundType.WOOD);
 		setName(type.registry);
-		setUnlocalizedName(type.unlocalized);
+		setTranslationKey(type.unlocalized);
 
 		if (type == Type.CAMO)
 			setCreativeTab(MalisisDoors.tab);

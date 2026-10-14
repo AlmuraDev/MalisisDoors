@@ -68,7 +68,7 @@ public class DoorItem extends ItemDoor implements IRegisterable<Item>, IIconProv
 		this.descriptor = desc;
 		this.maxStackSize = desc.getMaxStackSize();
 		setName(desc.getRegistryName());
-		setUnlocalizedName(desc.getUnlocalizedName());
+		setTranslationKey(desc.getUnlocalizedName());
 		//setTextureName(desc.getTextureName());
 		setCreativeTab(desc.getTab());
 
