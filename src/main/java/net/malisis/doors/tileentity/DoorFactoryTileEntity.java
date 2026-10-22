@@ -50,6 +50,8 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
+import javax.annotation.Nullable;
+
 /**
  * @author Ordinastie
  *
@@ -199,25 +201,13 @@ public class DoorFactoryTileEntity extends TileEntity implements IDirectInventor
 
 		if (isCreate)
 		{
-			ItemStack expected = CustomDoorItem.fromDoorFactory(this);
-			ItemStack output = outputSlot.getItemStack();
-			if (expected == null)
-				return;
-
-			if (output.getCount() >= output.getMaxStackSize() || !new ItemStacksMerger(expected, output).canMerge())
-				return;
-
 			frameSlot.extract(1);
 			topMaterialSlot.extract(1);
 			bottomMaterialSlot.extract(1);
-			outputSlot.insert(expected);
+			outputSlot.insert(CustomDoorItem.fromDoorFactory(this));
 		}
 		else
 		{
-			//the edited doors replace the whole output: wait until it's taken, so nothing is lost
-			if (!outputSlot.getItemStack().isEmpty())
-				return;
-
 			ItemStack doors = doorEditSlot.extract(ItemUtils.FULL_STACK);
 			if (BigDoorSettings.isBigDoor(doors))
 			{
@@ -242,25 +232,63 @@ public class DoorFactoryTileEntity extends TileEntity implements IDirectInventor
 
 	public boolean canCreateDoor()
 	{
-		if (doorMovement == null || doorSound == null || openingTime == 0)
-			return false;
+		return getCreateProblem() == null;
+	}
 
+	/**
+	 * Why a door can't be created (or modified) right now, for the player: shown when they click the button anyway.<br>
+	 * Big doors have their own movement and keep their own sound unless one is chosen, so they only need an opening time.
+	 *
+	 * @return the translation key of the reason, null if a door can be made
+	 */
+	@Nullable
+	public String getCreateProblem()
+	{
 		if (isCreate)
 		{
 			if (frameSlot.getItemStack().isEmpty())
-				return false;
+				return "gui.door_factory.problem.no_frame";
 			if (topMaterialSlot.getItemStack().isEmpty())
-				return false;
+				return "gui.door_factory.problem.no_top_material";
 			if (bottomMaterialSlot.getItemStack().isEmpty())
-				return false;
+				return "gui.door_factory.problem.no_bottom_material";
+			String settingsProblem = getSettingsProblem(true);
+			if (settingsProblem != null)
+				return settingsProblem;
+
+			ItemStack expected = CustomDoorItem.fromDoorFactory(this);
+			if (expected == null)
+				return "gui.door_factory.problem.invalid_materials";
+			ItemStack output = outputSlot.getItemStack();
+			if (!output.isEmpty() && (output.getCount() >= output.getMaxStackSize() || !new ItemStacksMerger(expected, output).canMerge()))
+				return "gui.door_factory.problem.output_full";
 		}
 		else
 		{
-			if (doorEditSlot.getItemStack().isEmpty())
-				return false;
+			ItemStack doors = doorEditSlot.getItemStack();
+			if (doors.isEmpty())
+				return "gui.door_factory.problem.no_door_to_modify";
+			//the edited doors replace the whole output: wait until it's taken, so nothing is lost
+			if (!outputSlot.getItemStack().isEmpty())
+				return "gui.door_factory.problem.output_not_empty";
+			String settingsProblem = getSettingsProblem(!BigDoorSettings.isBigDoor(doors));
+			if (settingsProblem != null)
+				return settingsProblem;
 		}
 
-		return true;
+		return null;
+	}
+
+	@Nullable
+	private String getSettingsProblem(boolean needsMovementAndSound)
+	{
+		if (needsMovementAndSound && doorMovement == null)
+			return "gui.door_factory.problem.no_movement";
+		if (needsMovementAndSound && doorSound == null)
+			return "gui.door_factory.problem.no_sound";
+		if (openingTime <= 0)
+			return "gui.door_factory.problem.no_opening_time";
+		return null;
 	}
 
 	public DoorDescriptor buildDescriptor(Block block, Item item)

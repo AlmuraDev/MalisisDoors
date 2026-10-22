@@ -24,6 +24,7 @@
 
 package net.malisis.doors.gui;
 
+import java.util.Objects;
 import java.util.Set;
 
 import com.google.common.collect.FluentIterable;
@@ -53,6 +54,7 @@ import net.malisis.core.client.gui.component.interaction.UITextField;
 import net.malisis.core.client.gui.event.ComponentEvent.ValueChange;
 import net.malisis.core.client.gui.event.component.StateChangeEvent.ActiveStateChange;
 import net.malisis.core.inventory.MalisisInventoryContainer;
+import net.malisis.core.renderer.font.FontOptions;
 import net.malisis.core.renderer.icon.Icon;
 import net.malisis.core.util.TileEntityUtils;
 import net.malisis.doors.DoorDescriptor.RedstoneBehavior;
@@ -62,6 +64,7 @@ import net.malisis.doors.bigdoors.BigDoorSettings;
 import net.malisis.doors.network.DoorFactoryMessage;
 import net.malisis.doors.tileentity.DoorFactoryTileEntity;
 import net.minecraft.client.resources.I18n;
+import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.ResourceLocation;
 
 /**
@@ -90,6 +93,15 @@ public class DoorFactoryGui extends MalisisGui
 	private UIContainer<?> contEdit;
 	private UIButton btnCreate;
 	private Digicode digicode;
+	//in place of the movement for big doors, which have their own
+	private UILabel lblBigDoorMovement;
+	//why the door can't be created or modified: next to the output after clicking the button, and in its tooltip
+	private UILabel lblProblem;
+	private String shownProblem;
+	private long problemShownUntil;
+
+	private static final long PROBLEM_SHOWN_MILLIS = 5000;
+	private static final int PROBLEM_COLOR = 0xFF5555;
 
 	private static String activeTab;
 
@@ -128,6 +140,13 @@ public class DoorFactoryGui extends MalisisGui
 		btnCreate = new UIButton(this, "gui.door_factory.create_door").setSize(80).setPosition(0, 110, Anchor.CENTER).register(this);
 		UISlot outputSlot = new UISlot(this, tileEntity.outputSlot).setPosition(0, 132, Anchor.CENTER);
 
+		lblProblem = new UILabel(this, "", true);
+		lblProblem.setFontOptions(FontOptions.builder().color(PROBLEM_COLOR).scale(0.8F).build());
+		lblProblem.setSize(98, 30);
+		lblProblem.setPosition(0, 130, Anchor.RIGHT);
+		lblProblem.setVisible(false);
+		window.add(lblProblem);
+
 		UIPlayerInventory playerInv = new UIPlayerInventory(this, inventoryContainer.getPlayerInventory());
 
 		window.add(playerInv);
@@ -156,6 +175,10 @@ public class DoorFactoryGui extends MalisisGui
 		selDoorMovement.setLabelPattern("door_movement.%s").register(this);
 		propContainer.add(new UILabel(this, "gui.door_factory.door_movement").setPosition(0, y + 2));
 		propContainer.add(selDoorMovement);
+		lblBigDoorMovement = new UILabel(this, "gui.door_factory.door_movement.big_door").setPosition(-4, y + 2, Anchor.RIGHT);
+		lblBigDoorMovement.setFontOptions(FontOptions.builder().color(0x404040).build());
+		lblBigDoorMovement.setVisible(false);
+		propContainer.add(lblBigDoorMovement);
 
 		//Opening time
 		y += 12;
@@ -254,13 +277,24 @@ public class DoorFactoryGui extends MalisisGui
 		return dcContainer;
 	}
 
-	//big doors have their own movement and are already double doors: those settings don't apply to them
 	@Override
 	public void update(int mouseX, int mouseY, float partialTick)
 	{
+		//big doors have their own movement and are already double doors: those settings don't apply to them
 		boolean bigDoor = !tileEntity.isCreate() && BigDoorSettings.isBigDoor(tileEntity.doorEditSlot.getItemStack());
-		selDoorMovement.setEnabled(!bigDoor);
+		selDoorMovement.setVisible(!bigDoor);
+		lblBigDoorMovement.setVisible(bigDoor);
 		cbDoubleDoor.setEnabled(!bigDoor);
+
+		//the reason the button does nothing: in its tooltip, and shown next to the output for a while after it is clicked
+		String problem = tileEntity.getCreateProblem();
+		if (!Objects.equals(problem, shownProblem))
+		{
+			shownProblem = problem;
+			btnCreate.setTooltip(problem == null ? null : new UITooltip(this, TextFormatting.RED + I18n.format(problem)));
+			lblProblem.setText(problem == null ? "" : I18n.format(problem));
+		}
+		lblProblem.setVisible(problem != null && System.currentTimeMillis() < problemShownUntil);
 	}
 
 	@Override
@@ -358,6 +392,13 @@ public class DoorFactoryGui extends MalisisGui
 	@Subscribe
 	public void onCreateDoor(UIButton.ClickEvent event)
 	{
+		//something missing: say what instead of doing nothing
+		if (tileEntity.getCreateProblem() != null)
+		{
+			problemShownUntil = System.currentTimeMillis() + PROBLEM_SHOWN_MILLIS;
+			return;
+		}
+		problemShownUntil = 0;
 		DoorFactoryMessage.sendCreateDoor(tileEntity);
 	}
 
