@@ -1,0 +1,24 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"group": "malisisdoors:big_door_vanilla_3x3",
+	"pattern": [
+		"D D",
+		" P ",
+		"D D"
+	],
+	"key": {
+		"D": {
+			"item": "minecraft:wooden_door"
+		},
+		"P": {
+			"item": "minecraft:planks",
+			"data": 0
+		}
+	},
+	"result": {
+		"item": "malisisdoors:big_door_vanilla_3x3",
+		"nbt": {
+			"doorWood": "oak"
+		}
+	}
+}
