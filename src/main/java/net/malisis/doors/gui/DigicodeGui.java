@@ -26,7 +26,7 @@ package net.malisis.doors.gui;
 
 import net.malisis.core.client.gui.Anchor;
 import net.malisis.core.client.gui.MalisisGui;
-import net.malisis.core.client.gui.component.container.UIWindow;
+import net.malisis.core.client.gui.component.container.UIContainer;
 import net.malisis.doors.network.DigicodeMessage;
 import net.malisis.doors.tileentity.DoorTileEntity;
 
@@ -51,9 +51,12 @@ public class DigicodeGui extends MalisisGui
 	@Override
 	public void construct()
 	{
-		digicode = new Digicode(this, expected).setAnchor(Anchor.MIDDLE | Anchor.CENTER).register(this);
+		digicode = new Digicode(expected);
+		digicode.setPosition(0, 0, Anchor.MIDDLE | Anchor.CENTER);
+		digicode.register(this);
 
-		UIWindow window = new UIWindow(this, digicode.getWidth() + 20, digicode.getHeight() + 20);
+		UIContainer window = UIContainer.window();
+		window.setSize(digicode.getWidth() + 20, digicode.getHeight() + 20);
 		window.add(digicode);
 
 		addToScreen(window);

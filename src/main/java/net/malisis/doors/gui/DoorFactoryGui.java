@@ -35,14 +35,12 @@ import com.google.common.eventbus.Subscribe;
 
 import net.malisis.core.client.gui.Anchor;
 import net.malisis.core.client.gui.ComponentPosition;
-import net.malisis.core.client.gui.GuiTexture;
 import net.malisis.core.client.gui.MalisisGui;
 import net.malisis.core.client.gui.component.UIComponent;
 import net.malisis.core.client.gui.component.UISlot;
 import net.malisis.core.client.gui.component.container.UIContainer;
 import net.malisis.core.client.gui.component.container.UIPlayerInventory;
 import net.malisis.core.client.gui.component.container.UITabGroup;
-import net.malisis.core.client.gui.component.container.UIWindow;
 import net.malisis.core.client.gui.component.decoration.UIImage;
 import net.malisis.core.client.gui.component.decoration.UILabel;
 import net.malisis.core.client.gui.component.decoration.UITooltip;
@@ -52,11 +50,15 @@ import net.malisis.core.client.gui.component.interaction.UIRadioButton;
 import net.malisis.core.client.gui.component.interaction.UISelect;
 import net.malisis.core.client.gui.component.interaction.UITab;
 import net.malisis.core.client.gui.component.interaction.UITextField;
+import net.malisis.core.client.gui.element.position.Position;
+import net.malisis.core.client.gui.element.position.Positions;
 import net.malisis.core.client.gui.event.ComponentEvent.ValueChange;
 import net.malisis.core.client.gui.event.component.StateChangeEvent.ActiveStateChange;
+import net.malisis.core.client.gui.render.GuiIcon;
+import net.malisis.core.client.gui.render.GuiTexture;
 import net.malisis.core.inventory.MalisisInventoryContainer;
+import net.malisis.core.inventory.MalisisSlot;
 import net.malisis.core.renderer.font.FontOptions;
-import net.malisis.core.renderer.icon.Icon;
 import net.malisis.core.util.TileEntityUtils;
 import net.malisis.doors.DoorDescriptor.RedstoneBehavior;
 import net.malisis.doors.DoorRegistry;
@@ -79,9 +81,9 @@ public class DoorFactoryGui extends MalisisGui
 {
 	public static ResourceLocation tabIconsRl = new ResourceLocation(MalisisDoors.modid, "textures/gui/doorfactory_tabicons.png");
 	public static GuiTexture tabTexture = new GuiTexture(tabIconsRl, 128, 128);
-	public static Icon propIcon = tabTexture.getIcon(0, 0, 64, 64);
-	public static Icon matIcon = tabTexture.getIcon(64, 0, 64, 64);
-	public static Icon dcIcon = tabTexture.getIcon(0, 64, 64, 64);
+	public static GuiIcon propIcon = new GuiIcon(tabTexture, 0, 0, 64, 64);
+	public static GuiIcon matIcon = new GuiIcon(tabTexture, 64, 0, 64, 64);
+	public static GuiIcon dcIcon = new GuiIcon(tabTexture, 0, 64, 64, 64);
 
 	private DoorFactoryTileEntity tileEntity;
 	private UISelect<String> selDoorMovement;
@@ -93,8 +95,8 @@ public class DoorFactoryGui extends MalisisGui
 	private UISelect<String> selDoorSound;
 	private UIRadioButton rbCreate;
 	private UIRadioButton rbEdit;
-	private UIContainer<?> contCreate;
-	private UIContainer<?> contEdit;
+	private UIContainer contCreate;
+	private UIContainer contEdit;
 	private UIButton btnCreate;
 	private Digicode digicode;
 	//in place of the movement for big doors, which have their own
@@ -122,46 +124,52 @@ public class DoorFactoryGui extends MalisisGui
 	@Override
 	public void construct()
 	{
-		UIWindow window = new UIWindow(this, "tile.door_factory.name", UIPlayerInventory.INVENTORY_WIDTH + 80, 255);
+		//the 6.5 window: a window background, a padding of 5 and the title in its top left corner
+		UIContainer window = UIContainer.window();
+		window.setSize(UIPlayerInventory.INVENTORY_SIZE.width() + 80, 255);
+		window.add(label("tile.door_factory.name", 0, 0));
 
-		UIContainer<?> propContainer = getPropertiesContainer();
-		UIContainer<?> matContainer = getMaterialsContainer();
-		UIContainer<?> dcContainer = getDigicodeContainer();
+		UIContainer propContainer = getPropertiesContainer();
+		UIContainer matContainer = getMaterialsContainer();
+		UIContainer dcContainer = getDigicodeContainer();
 
-		UITabGroup tabGroup = new UITabGroup(this, ComponentPosition.LEFT).setPosition(0, 10);
+		UITabGroup tabGroup = new UITabGroup(ComponentPosition.LEFT, UITabGroup.Type.WINDOW);
 
-		int a = 16;
-		UITab tabProp = new UITab(this, new UIImage(this, tabTexture, propIcon).setSize(a, a)).setName("tab_prop");
-		tabProp.setTooltip(new UITooltip(this, "gui.door_factory.tab_properties")).register(this);
-		UITab tabMat = new UITab(this, new UIImage(this, tabTexture, matIcon).setSize(a, a)).setName("tab_mat");
-		tabMat.setTooltip(new UITooltip(this, "gui.door_factory.tab_materials")).register(this);
-		UITab tabDc = new UITab(this, new UIImage(this, tabTexture, dcIcon).setSize(a, a)).setName("tab_dc");
-		tabDc.setTooltip(new UITooltip(this, "gui.door_factory.tab_digicode")).register(this);
+		UITab tabProp = tab("tab_prop", propIcon, "gui.door_factory.tab_properties");
+		UITab tabMat = tab("tab_mat", matIcon, "gui.door_factory.tab_materials");
+		UITab tabDc = tab("tab_dc", dcIcon, "gui.door_factory.tab_digicode");
 
 		tabGroup.addTab(tabProp, propContainer);
 		tabGroup.addTab(tabMat, matContainer);
 		tabGroup.addTab(tabDc, dcContainer);
 
 		tabGroup.setActiveTab(activeTab != null ? activeTab : "tab_prop");
+		//attaching adds the tab containers to the window, at its top left and its full size
 		tabGroup.attachTo(window, false);
+		//as in 6.5: the tabs down the left side from near the top (6.6 centres them), the containers below the title
+		tabGroup.setPosition(Position.of(Positions.leftOf(tabGroup, window, -2), () -> window.position().y() + 10));
+		placeTabContainer(propContainer, 95);
+		placeTabContainer(matContainer, 80);
+		placeTabContainer(dcContainer, 80);
 
-		btnCreate = new UIButton(this, "gui.door_factory.create_door").setSize(80).setPosition(0, 110, Anchor.CENTER).register(this);
-		UISlot outputSlot = new UISlot(this, tileEntity.outputSlot).setPosition(0, 132, Anchor.CENTER);
+		btnCreate = new UIButton("gui.door_factory.create_door");
+		//buttons grow to fit their text: 1 high is the text's height
+		btnCreate.setSize(80, 1);
+		btnCreate.setPosition(0, 110, Anchor.CENTER);
+		btnCreate.onClick(this::onCreateDoor);
+		UISlot outputSlot = new UISlot(tileEntity.outputSlot);
+		outputSlot.setPosition(0, 132, Anchor.CENTER);
 
-		lblProblem = new UILabel(this, "", true);
+		lblProblem = new UILabel("", true);
 		lblProblem.setFontOptions(FontOptions.builder().color(PROBLEM_COLOR).scale(0.8F).build());
 		lblProblem.setSize(98, 30);
 		lblProblem.setPosition(0, 130, Anchor.RIGHT);
 		lblProblem.setVisible(false);
 		window.add(lblProblem);
 
-		UIPlayerInventory playerInv = new UIPlayerInventory(this, inventoryContainer.getPlayerInventory());
+		UIPlayerInventory playerInv = new UIPlayerInventory(inventoryContainer.getPlayerInventory());
 
 		window.add(playerInv);
-
-		window.add(propContainer);
-		window.add(matContainer);
-		window.add(dcContainer);
 
 		window.add(btnCreate);
 		window.add(outputSlot);
@@ -172,63 +180,131 @@ public class DoorFactoryGui extends MalisisGui
 		TileEntityUtils.linkTileEntityToGui(tileEntity, this);
 	}
 
-	private UIContainer<?> getPropertiesContainer()
+	private UIContainer getPropertiesContainer()
 	{
-		UIContainer<?> propContainer = new UIContainer<>(this, UIComponent.INHERITED, 95).setPosition(0, 15);
+		UIContainer propContainer = container(95);
 
 		//Door movement
 		int y = 2;
-		selDoorMovement = new UISelect<>(this, 100, getSortedList(DoorRegistry.listMovements().keySet(), "door_movement."));
-		selDoorMovement.setPosition(0, y, Anchor.RIGHT);
-		selDoorMovement.setLabelPattern("door_movement.%s").register(this);
-		propContainer.add(new UILabel(this, "gui.door_factory.door_movement").setPosition(0, y + 2));
+		selDoorMovement = select(100, getSortedList(DoorRegistry.listMovements().keySet(), "door_movement."), "door_movement.%s", 0, y);
+		propContainer.add(label("gui.door_factory.door_movement", 0, y + 2));
 		propContainer.add(selDoorMovement);
-		lblBigDoorMovement = new UILabel(this, "gui.door_factory.door_movement.big_door").setPosition(-4, y + 2, Anchor.RIGHT);
+		lblBigDoorMovement = new UILabel("gui.door_factory.door_movement.big_door");
+		lblBigDoorMovement.setPosition(-4, y + 2, Anchor.RIGHT);
 		lblBigDoorMovement.setFontOptions(FontOptions.builder().color(0x404040).build());
 		lblBigDoorMovement.setVisible(false);
 		propContainer.add(lblBigDoorMovement);
 
 		//Opening time
 		y += 12;
-		tfOpenTime = new UITextField(this, null).setSize(30, 0).setPosition(-5, y, Anchor.RIGHT).register(this);
-		propContainer.add(new UILabel(this, "gui.door_factory.door_open_time").setPosition(0, y + 2));
+		tfOpenTime = textField(y);
+		propContainer.add(label("gui.door_factory.door_open_time", 0, y + 2));
 		propContainer.add(tfOpenTime);
 
 		//Auto close time
 		y += 12;
-		tfAutoCloseTime = new UITextField(this, null).setSize(30, 0).setPosition(-5, y, Anchor.RIGHT).register(this);
-		propContainer.add(new UILabel(this, "gui.door_factory.door_auto_close_time").setPosition(0, y + 2));
+		tfAutoCloseTime = textField(y);
+		propContainer.add(label("gui.door_factory.door_auto_close_time", 0, y + 2));
 		propContainer.add(tfAutoCloseTime);
 
 		//Double door
 		y += 12;
-		cbDoubleDoor = new UICheckBox(this).setPosition(-15, y, Anchor.RIGHT).register(this);
-		propContainer.add(new UILabel(this, "gui.door_factory.door_double_door").setPosition(0, y + 2));
+		cbDoubleDoor = checkBox(y);
+		propContainer.add(label("gui.door_factory.door_double_door", 0, y + 2));
 		propContainer.add(cbDoubleDoor);
 
 		//Proximity detection
 		y += 12;
-		cbProximity = new UICheckBox(this).setPosition(-15, y, Anchor.RIGHT).register(this);
-		propContainer.add(new UILabel(this, "gui.door_factory.proximity_detection").setPosition(0, y + 2));
+		cbProximity = checkBox(y);
+		propContainer.add(label("gui.door_factory.proximity_detection", 0, y + 2));
 		propContainer.add(cbProximity);
 
 		//Redstone behavior
 		y += 12;
-		selRedstone = new UISelect<>(this, 100, Lists.newArrayList(RedstoneBehavior.values()));
-		selRedstone.setPosition(0, y, Anchor.RIGHT);
-		selRedstone.setLabelPattern("gui.door_factory.redstone_behavior.%s").register(this);
-		propContainer.add(new UILabel(this, "gui.door_factory.redstone_behavior").setPosition(0, y + 2));
+		selRedstone = select(100, Lists.newArrayList(RedstoneBehavior.values()), "gui.door_factory.redstone_behavior.%s", 0, y);
+		propContainer.add(label("gui.door_factory.redstone_behavior", 0, y + 2));
 		propContainer.add(selRedstone);
 
 		//Door sound
 		y += 12;
-		selDoorSound = new UISelect<>(this, 100, getSortedList(DoorRegistry.listSounds().keySet(), "gui.door_factory.door_sound."));
-		selDoorSound.setPosition(0, y, Anchor.RIGHT);
-		selDoorSound.setLabelPattern("gui.door_factory.door_sound.%s").register(this);
-		propContainer.add(new UILabel(this, "gui.door_factory.door_sound").setPosition(0, y + 2));
+		selDoorSound = select(100, getSortedList(DoorRegistry.listSounds().keySet(), "gui.door_factory.door_sound."),
+				"gui.door_factory.door_sound.%s", 0, y);
+		propContainer.add(label("gui.door_factory.door_sound", 0, y + 2));
 		propContainer.add(selDoorSound);
 
 		return propContainer;
+	}
+
+	//6.6 components are made without their gui, and their setters don't chain: these make the ones this screen uses
+
+	private UILabel label(String text, int x, int y)
+	{
+		UILabel label = new UILabel(text);
+		label.setPosition(x, y);
+		return label;
+	}
+
+	private UIContainer container(int height)
+	{
+		UIContainer container = new UIContainer();
+		placeTabContainer(container, height);
+		return container;
+	}
+
+	/**
+	 * Below the window title, the width of the window.
+	 */
+	private void placeTabContainer(UIContainer container, int height)
+	{
+		container.setSize(UIComponent.INHERITED, height);
+		container.setPosition(0, 15);
+	}
+
+	private UITab tab(String name, GuiIcon icon, String tooltip)
+	{
+		UIImage image = new UIImage(icon);
+		image.setSize(16, 16);
+		UITab tab = new UITab(image);
+		tab.setName(name);
+		tab.setTooltip(new UITooltip(tooltip));
+		tab.register(this);
+		return tab;
+	}
+
+	/**
+	 * @param labelPattern the translation key of an option's label, %s being the option
+	 */
+	private <T> UISelect<T> select(int width, List<T> options, String labelPattern, int x, int y)
+	{
+		UISelect<T> select = new UISelect<>(width, options);
+		select.setPosition(x, y, Anchor.RIGHT);
+		select.setLabelFunction(option -> I18n.format(String.format(labelPattern, option)));
+		select.register(this);
+		return select;
+	}
+
+	private UITextField textField(int y)
+	{
+		UITextField textField = new UITextField("");
+		textField.setSize(30, 0);
+		textField.setPosition(-5, y, Anchor.RIGHT);
+		textField.register(this);
+		return textField;
+	}
+
+	private UICheckBox checkBox(int y)
+	{
+		UICheckBox checkBox = new UICheckBox();
+		checkBox.setPosition(-15, y, Anchor.RIGHT);
+		checkBox.register(this);
+		return checkBox;
+	}
+
+	private UISlot slot(MalisisSlot slot, int x, int y, int anchor)
+	{
+		UISlot uiSlot = new UISlot(slot);
+		uiSlot.setPosition(x, y, anchor);
+		return uiSlot;
 	}
 
 	private ImmutableList<String> getSortedList(Set<String> set, String prefix)
@@ -238,44 +314,47 @@ public class DoorFactoryGui extends MalisisGui
 		});
 	}
 
-	private UIContainer<?> getMaterialsContainer()
+	private UIContainer getMaterialsContainer()
 	{
-		UIContainer<?> matContainer = new UIContainer<>(this, UIComponent.INHERITED, 80).setPosition(0, 15);
+		UIContainer matContainer = container(80);
 
-		rbCreate = new UIRadioButton(this, "rbDoor", "gui.door_factory.rb_create").setPosition(30, 0).register(this);
-		rbEdit = new UIRadioButton(this, "rbDoor", "gui.door_factory.rb_edit").setPosition(100, 0).register(this);
+		rbCreate = new UIRadioButton("rbDoor", "gui.door_factory.rb_create");
+		rbCreate.setPosition(30, 0);
+		rbCreate.register(this);
+		rbEdit = new UIRadioButton("rbDoor", "gui.door_factory.rb_edit");
+		rbEdit.setPosition(100, 0);
+		rbEdit.register(this);
 
 		matContainer.add(rbCreate);
 		matContainer.add(rbEdit);
 
-		contCreate = new UIContainer<>(this).setPosition(0, 14);
+		//below the radio buttons, to the bottom of the tab
+		contCreate = new UIContainer();
+		contCreate.setSize(UIComponent.INHERITED, -14);
+		contCreate.setPosition(0, 14);
 
 		int y = 0;
-		UISlot frameSlot = new UISlot(this, tileEntity.frameSlot).setPosition(-10, y, Anchor.RIGHT);
-		UISlot topMaterialSlot = new UISlot(this, tileEntity.topMaterialSlot).setPosition(-10, y + 18, Anchor.RIGHT);
-		UISlot bottomMaterialSlot = new UISlot(this, tileEntity.bottomMaterialSlot).setPosition(-10, y + 36, Anchor.RIGHT);
+		contCreate.add(label("gui.door_factory.frame_type", 0, y + 5));
+		contCreate.add(label("gui.door_factory.top_material", 0, y + 23));
+		contCreate.add(label("gui.door_factory.bottom_material", 0, y + 41));
 
-		contCreate.add(new UILabel(this, "gui.door_factory.frame_type").setPosition(0, y + 5));
-		contCreate.add(new UILabel(this, "gui.door_factory.top_material").setPosition(0, y + 23));
-		contCreate.add(new UILabel(this, "gui.door_factory.bottom_material").setPosition(0, y + 41));
+		contCreate.add(slot(tileEntity.frameSlot, -10, y, Anchor.RIGHT));
+		contCreate.add(slot(tileEntity.topMaterialSlot, -10, y + 18, Anchor.RIGHT));
+		contCreate.add(slot(tileEntity.bottomMaterialSlot, -10, y + 36, Anchor.RIGHT));
 
-		contCreate.add(frameSlot);
-		contCreate.add(topMaterialSlot);
-		contCreate.add(bottomMaterialSlot);
+		contEdit = new UIContainer();
+		contEdit.setSize(UIComponent.INHERITED, -14);
+		contEdit.setPosition(0, 14);
 
-		contEdit = new UIContainer<>(this).setPosition(0, 14);
-
-		UISlot doorEditSlotSlot = new UISlot(this, tileEntity.doorEditSlot).setPosition(-10, 18, Anchor.RIGHT);
-		contEdit.add(new UILabel(this, "gui.door_factory.door_edit_slot").setPosition(0, 23));
-		contEdit.add(doorEditSlotSlot);
+		contEdit.add(label("gui.door_factory.door_edit_slot", 0, 23));
+		contEdit.add(slot(tileEntity.doorEditSlot, -10, 18, Anchor.RIGHT));
 
 		//wooden 3x3 doors only
 		List<String> woods = Lists.newArrayList(WOOD_AROUND);
 		for (BlockPlanks.EnumType wood : Door3x3Tile.WOODS)
 			woods.add(wood.getName());
-		selBigDoorWood = new UISelect<>(this, 80, woods).setPosition(-4, 42, Anchor.RIGHT);
-		selBigDoorWood.setLabelPattern("gui.door_factory.big_door_wood.%s").register(this);
-		lblBigDoorWood = new UILabel(this, "gui.door_factory.big_door_wood").setPosition(0, 44);
+		selBigDoorWood = select(80, woods, "gui.door_factory.big_door_wood.%s", -4, 42);
+		lblBigDoorWood = label("gui.door_factory.big_door_wood", 0, 44);
 		contEdit.add(lblBigDoorWood);
 		contEdit.add(selBigDoorWood);
 
@@ -285,18 +364,20 @@ public class DoorFactoryGui extends MalisisGui
 		return matContainer;
 	}
 
-	private UIContainer<?> getDigicodeContainer()
+	private UIContainer getDigicodeContainer()
 	{
-		UIContainer<?> dcContainer = new UIContainer<>(this, UIComponent.INHERITED, 80).setPosition(0, 15);
+		UIContainer dcContainer = container(80);
 
-		digicode = new Digicode(this).setAnchor(Anchor.CENTER).register(this);
+		digicode = new Digicode();
+		digicode.setPosition(0, 0, Anchor.CENTER);
+		digicode.register(this);
 		dcContainer.add(digicode);
 
 		return dcContainer;
 	}
 
 	@Override
-	public void update(int mouseX, int mouseY, float partialTick)
+	public void update()
 	{
 		//big doors have their own movement and are already double doors: those settings don't apply to them
 		boolean bigDoor = !tileEntity.isCreate() && BigDoorSettings.isBigDoor(tileEntity.doorEditSlot.getItemStack());
@@ -312,7 +393,7 @@ public class DoorFactoryGui extends MalisisGui
 		if (!Objects.equals(problem, shownProblem))
 		{
 			shownProblem = problem;
-			btnCreate.setTooltip(problem == null ? null : new UITooltip(this, TextFormatting.RED + I18n.format(problem)));
+			btnCreate.setTooltip(problem == null ? (UITooltip) null : new UITooltip(TextFormatting.RED + I18n.format(problem)));
 			lblProblem.setText(problem == null ? "" : I18n.format(problem));
 		}
 		lblProblem.setVisible(problem != null && System.currentTimeMillis() < problemShownUntil);
@@ -413,8 +494,8 @@ public class DoorFactoryGui extends MalisisGui
 		DoorFactoryMessage.sendDoorInformations(tileEntity);
 	}
 
-	@Subscribe
-	public void onCreateDoor(UIButton.ClickEvent event)
+	//the create/edit button
+	private void onCreateDoor()
 	{
 		//something missing: say what instead of doing nothing
 		if (tileEntity.getCreateProblem() != null)
