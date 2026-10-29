@@ -15,6 +15,7 @@ import net.malisis.doors.movement.Door3x3Movement;
 import net.malisis.doors.sound.RustyDoorSound;
 import net.malisis.doors.sound.WoodenDoorSound;
 import net.malisis.doors.tileentity.DoorTileEntity;
+import net.minecraft.block.BlockPlanks;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
@@ -26,9 +27,14 @@ import net.minecraft.util.math.BlockPos;
 @Syncable("TileEntity")
 public class Door3x3Tile extends DoorTileEntity implements BigDoorSettings.IConfigurable
 {
+	/** The woods a wooden door can be shown in. */
+	public static final BlockPlanks.EnumType[] WOODS = BlockPlanks.EnumType.values();
+
 	private IBlockState frameState;
 	/** Whether the settings were set by the door factory (see {@link BigDoorSettings}). */
 	private boolean customSettings;
+	/** The wood the door is shown in (it stays with the dropped door), null for the door's own. */
+	private BlockPlanks.EnumType wood;
 
 	public Door3x3Tile()
 	{
@@ -58,6 +64,30 @@ public class Door3x3Tile extends DoorTileEntity implements BigDoorSettings.IConf
 	{
 		if (state != null)
 			frameState = state;
+	}
+
+	public BlockPlanks.EnumType getWood()
+	{
+		return wood;
+	}
+
+	public void setWood(BlockPlanks.EnumType wood)
+	{
+		this.wood = wood;
+	}
+
+	/**
+	 * Gets the wood from its name.
+	 *
+	 * @param name the name
+	 * @return the wood, null if none has that name
+	 */
+	public static BlockPlanks.EnumType woodFromName(String name)
+	{
+		for (BlockPlanks.EnumType wood : WOODS)
+			if (wood.getName().equals(name))
+				return wood;
+		return null;
 	}
 
 	@Override
@@ -138,6 +168,8 @@ public class Door3x3Tile extends DoorTileEntity implements BigDoorSettings.IConf
 		ItemStack stack = new ItemStack(this.getBlockType());
 		NBTTagCompound nbt = new NBTTagCompound();
 		MBlockState.toNBT(nbt, this.frameState);
+		if (wood != null)
+			nbt.setString(Door3x3.NBT_WOOD, wood.getName());
 		stack.setTagCompound(nbt);
 		BigDoorSettings.writeToDrop(stack, this);
 		return stack;
@@ -149,6 +181,7 @@ public class Door3x3Tile extends DoorTileEntity implements BigDoorSettings.IConf
 		super.readFromNBT(tag);
 		frameState = MoreObjects.firstNonNull(MBlockState.fromNBT(tag), Blocks.QUARTZ_BLOCK.getDefaultState());
 		customSettings = tag.getBoolean("customSettings");
+		wood = woodFromName(tag.getString("wood"));
 	}
 
 	@Override
@@ -157,6 +190,8 @@ public class Door3x3Tile extends DoorTileEntity implements BigDoorSettings.IConf
 		super.writeToNBT(tag);
 		MBlockState.toNBT(tag, frameState);
 		tag.setBoolean("customSettings", customSettings);
+		if (wood != null)
+			tag.setString("wood", wood.getName());
 
 		return tag;
 	}

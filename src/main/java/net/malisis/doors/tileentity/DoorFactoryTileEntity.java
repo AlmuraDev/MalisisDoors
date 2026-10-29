@@ -36,12 +36,15 @@ import net.malisis.doors.DoorDescriptor.RedstoneBehavior;
 import net.malisis.doors.DoorRegistry;
 import net.malisis.doors.MalisisDoors;
 import net.malisis.doors.bigdoors.BigDoorSettings;
+import net.malisis.doors.bigdoors.Door3x3;
+import net.malisis.doors.bigdoors.Door3x3Tile;
 import net.malisis.doors.gui.DoorFactoryGui;
 import net.malisis.doors.item.CustomDoorItem;
 import net.malisis.doors.item.DoorItem;
 import net.malisis.doors.movement.IDoorMovement;
 import net.malisis.doors.sound.IDoorSound;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockPlanks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemDoor;
 import net.minecraft.item.ItemStack;
@@ -67,6 +70,8 @@ public class DoorFactoryTileEntity extends TileEntity implements IDirectInventor
 	private boolean doubleDoor = true;
 	private boolean proximityDetection = false;
 	private String code;
+	/** The wood for wooden 3x3 doors, null to match the blocks around them when placed. */
+	private BlockPlanks.EnumType bigDoorWood;
 
 	private boolean isCreate = true;
 
@@ -178,6 +183,16 @@ public class DoorFactoryTileEntity extends TileEntity implements IDirectInventor
 		this.code = code;
 	}
 
+	public BlockPlanks.EnumType getBigDoorWood()
+	{
+		return bigDoorWood;
+	}
+
+	public void setBigDoorWood(BlockPlanks.EnumType wood)
+	{
+		bigDoorWood = wood;
+	}
+
 	@Override
 	public MalisisInventory getInventory()
 	{
@@ -213,6 +228,13 @@ public class DoorFactoryTileEntity extends TileEntity implements IDirectInventor
 			{
 				//big doors only take the settings that apply to them (see BigDoorSettings)
 				BigDoorSettings.writeToItem(doors, buildDescriptor(null, null));
+				if (Door3x3.isWooden(doors))
+				{
+					if (bigDoorWood != null)
+						doors.getTagCompound().setString(Door3x3.NBT_WOOD, bigDoorWood.getName());
+					else
+						doors.getTagCompound().removeTag(Door3x3.NBT_WOOD);
+				}
 				outputSlot.insert(doors);
 				return;
 			}
@@ -323,6 +345,8 @@ public class DoorFactoryTileEntity extends TileEntity implements IDirectInventor
 		nbt.setInteger("redstoneBehavior", getRedstoneBehavior().ordinal());
 		nbt.setBoolean("doubleDoor", doubleDoor);
 		nbt.setBoolean("proximityDetection", proximityDetection);
+		if (bigDoorWood != null)
+			nbt.setString("bigDoorWood", bigDoorWood.getName());
 
 		inventory.writeToNBT(nbt);
 
@@ -341,6 +365,7 @@ public class DoorFactoryTileEntity extends TileEntity implements IDirectInventor
 		redstoneBehavior = RedstoneBehavior.values()[nbt.getInteger("redstoneBehavior")];
 		doubleDoor = nbt.getBoolean("doubleDoor");
 		proximityDetection = nbt.getBoolean("proximityDetection");
+		bigDoorWood = Door3x3Tile.woodFromName(nbt.getString("bigDoorWood"));
 
 		inventory.readFromNBT(nbt);
 	}

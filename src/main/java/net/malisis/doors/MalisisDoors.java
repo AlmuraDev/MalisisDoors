@@ -163,6 +163,7 @@ public class MalisisDoors implements IMalisisMod
 		public static Door3x3 bigDoorDarkOak;
 		public static Door3x3 bigDoorIron;
 		public static Door3x3 bigDoorRusty;
+		public static Door3x3 bigDoorVanilla;
 
 		public static TrapDoor slidingTrapDoor;
 		public static FenceGate camoFenceGate;

@@ -353,6 +353,9 @@ public class Registers
 		bigDoorRusty = new Door3x3(Door3x3.Type.RUSTY);
 		bigDoorRusty.register();
 
+		bigDoorVanilla = new Door3x3(Door3x3.Type.VANILLA);
+		bigDoorVanilla.register();
+
 		GameRegistry.registerTileEntity(Door3x3Tile.class, "door3x3");
 
 		GameRegistry.registerTileEntity(BigDoorTileEntity.class, "bigDoorTileEntity");

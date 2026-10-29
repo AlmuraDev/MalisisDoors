@@ -1,7 +1,9 @@
 package net.malisis.doors.bigdoors;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 import net.malisis.core.MalisisCore;
 import net.malisis.core.block.BoundingBoxType;
@@ -21,11 +23,14 @@ import net.malisis.doors.block.Door;
 import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.SoundType;
+import net.minecraft.block.BlockPlanks;
 import net.minecraft.block.material.Material;
+import net.minecraft.block.properties.IProperty;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumBlockRenderType;
@@ -41,24 +46,34 @@ public class Door3x3 extends MalisisBlock implements ITileEntityProvider, IChunk
 {
 	public enum Type
 	{
-		OAK("big_door_oak_3x3", false),
-		SPRUCE("big_door_spruce_3x3", false),
-		BIRCH("big_door_birch_3x3", false),
-		JUNGLE("big_door_jungle_3x3", false),
-		ACACIA("big_door_acacia_3x3", false),
-		DARK_OAK("big_door_dark_oak_3x3", false),
-		IRON("big_door_iron_3x3", true),
-		RUSTY("big_door_rusty_3x3", true);
+		OAK("big_door_oak_3x3", BlockPlanks.EnumType.OAK, false),
+		SPRUCE("big_door_spruce_3x3", BlockPlanks.EnumType.SPRUCE, false),
+		BIRCH("big_door_birch_3x3", BlockPlanks.EnumType.BIRCH, false),
+		JUNGLE("big_door_jungle_3x3", BlockPlanks.EnumType.JUNGLE, false),
+		ACACIA("big_door_acacia_3x3", BlockPlanks.EnumType.ACACIA, false),
+		DARK_OAK("big_door_dark_oak_3x3", BlockPlanks.EnumType.DARK_OAK, false),
+		IRON("big_door_iron_3x3", null, false),
+		RUSTY("big_door_rusty_3x3", null, false),
+		VANILLA("big_door_vanilla_3x3", BlockPlanks.EnumType.OAK, true);
 
 		public String name;
 		public boolean metal;
+		/** The wood the door is made of, null for metal doors. A wooden door keeps its pattern in any other wood. */
+		public BlockPlanks.EnumType wood;
+		/** Whether the door is the vanilla door of its wood, stretched to 3x3 (see {@link StretchedDoorIcon}). */
+		public boolean vanilla;
 
-		Type(String name, boolean metal)
+		Type(String name, BlockPlanks.EnumType wood, boolean vanilla)
 		{
 			this.name = name;
-			this.metal = metal;
+			this.metal = wood == null;
+			this.wood = wood;
+			this.vanilla = vanilla;
 		}
 	}
+
+	/** The item NBT key of the door's wood (chosen in the door factory, or kept from where the door was placed before). */
+	public static final String NBT_WOOD = "doorWood";
 
 	private Type type;
 	private AxisAlignedBB defaultBoundingBox = new AxisAlignedBB(-1, 0, 1 - Door.DOOR_WIDTH, 2, 3, 1);
@@ -79,6 +94,25 @@ public class Door3x3 extends MalisisBlock implements ITileEntityProvider, IChunk
 			addComponent(Door3x3IconProvider.get(type));
 	}
 
+	public Type getType()
+	{
+		return type;
+	}
+
+	/**
+	 * Checks if the item is a wooden 3x3 door, whose wood can be chosen in the door factory.
+	 *
+	 * @param itemStack the item stack
+	 * @return true, if it is a wooden 3x3 door
+	 */
+	public static boolean isWooden(ItemStack itemStack)
+	{
+		if (itemStack.isEmpty())
+			return false;
+		Block block = Block.getBlockFromItem(itemStack.getItem());
+		return block instanceof Door3x3 && !((Door3x3) block).type.metal;
+	}
+
 	@Override
 	public void onBlockPlacedBy(World world, BlockPos pos, IBlockState state, EntityLivingBase player, ItemStack itemStack)
 	{
@@ -90,9 +124,58 @@ public class Door3x3 extends MalisisBlock implements ITileEntityProvider, IChunk
 		if (te != null)
 		{
 			te.setFrameState(MBlockState.fromNBT(itemStack.getTagCompound()));
+			if (!type.metal)
+				setPlacedWood(te, world, pos, itemStack);
 			//settings set in the door factory
 			BigDoorSettings.applyFromItem(itemStack, te);
 		}
+	}
+
+	/**
+	 * Sets the wood of the placed door: the item's (chosen in the door factory, or kept from where the door was before), otherwise the most
+	 * common wood around the door (so it matches the planks it is set in), otherwise the door's own.
+	 */
+	private void setPlacedWood(Door3x3Tile te, World world, BlockPos pos, ItemStack itemStack)
+	{
+		NBTTagCompound nbt = itemStack.getTagCompound();
+		BlockPlanks.EnumType itemWood = nbt != null ? Door3x3Tile.woodFromName(nbt.getString(NBT_WOOD)) : null;
+		if (itemWood != null)
+		{
+			te.setWood(itemWood);
+			return;
+		}
+
+		//the columns on each side of the door, and the row above it
+		EnumFacing side = DirectionalComponent.getDirection(world, pos).rotateY();
+		List<BlockPos> around = new ArrayList<>();
+		for (int i = 0; i < 3; i++)
+		{
+			around.add(pos.offset(side, 2).up(i));
+			around.add(pos.offset(side, -2).up(i));
+			around.add(pos.offset(side, i - 1).up(3));
+		}
+
+		Map<BlockPlanks.EnumType, Integer> counts = new EnumMap<>(BlockPlanks.EnumType.class);
+		for (BlockPos p : around)
+		{
+			BlockPlanks.EnumType wood = getWood(world.getBlockState(p));
+			if (wood != null)
+				counts.merge(wood, 1, Integer::sum);
+		}
+
+		BlockPlanks.EnumType wood = counts.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
+		te.setWood(wood);
+	}
+
+	/**
+	 * The wood of a block (planks, logs, wooden slabs...), if it has a wood variant.
+	 */
+	private static BlockPlanks.EnumType getWood(IBlockState state)
+	{
+		for (IProperty<?> property : state.getPropertyKeys())
+			if (property.getValueClass() == BlockPlanks.EnumType.class)
+				return (BlockPlanks.EnumType) state.getValue(property);
+		return null;
 	}
 
 	@Override
@@ -199,11 +282,36 @@ public class Door3x3 extends MalisisBlock implements ITileEntityProvider, IChunk
 	{
 		Icon itemIcon;
 		Icon doorIcon;
+		//the door in each other wood: the vanilla door of that wood, or this door's pattern in its planks
+		Map<BlockPlanks.EnumType, Icon> woodIcons = new EnumMap<>(BlockPlanks.EnumType.class);
 
 		public Door3x3IconProvider(Type type)
 		{
+			if (type.vanilla)
+			{
+				doorIcon = itemIcon = StretchedDoorIcon.from(type.wood);
+				for (BlockPlanks.EnumType wood : Door3x3Tile.WOODS)
+					woodIcons.put(wood, StretchedDoorIcon.from(wood));
+				return;
+			}
+
 			itemIcon = Icon.from(MalisisDoors.modid + ":items/" + type.name);
 			doorIcon = Icon.from(MalisisDoors.modid + ":blocks/" + type.name);
+			if (type.wood != null)
+				for (BlockPlanks.EnumType wood : Door3x3Tile.WOODS)
+					if (wood != type.wood)
+						woodIcons.put(wood, PlanksDoorIcon.from(type, wood));
+		}
+
+		/**
+		 * The door's icon in the wood.
+		 *
+		 * @param wood the wood, null for the door's own
+		 * @return the icon
+		 */
+		public Icon getDoorIcon(BlockPlanks.EnumType wood)
+		{
+			return wood != null && woodIcons.containsKey(wood) ? woodIcons.get(wood) : doorIcon;
 		}
 
 		@Override
@@ -215,7 +323,8 @@ public class Door3x3 extends MalisisBlock implements ITileEntityProvider, IChunk
 		@Override
 		public Icon getIcon(ItemStack itemStack, EnumFacing side)
 		{
-			return doorIcon;
+			NBTTagCompound nbt = itemStack.getTagCompound();
+			return getDoorIcon(nbt != null ? Door3x3Tile.woodFromName(nbt.getString(NBT_WOOD)) : null);
 		}
 
 		public static Door3x3IconProvider get(Type type)

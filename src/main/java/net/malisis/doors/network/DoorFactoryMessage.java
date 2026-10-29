@@ -31,6 +31,7 @@ import net.malisis.core.util.TileEntityUtils;
 import net.malisis.doors.DoorDescriptor.RedstoneBehavior;
 import net.malisis.doors.DoorRegistry;
 import net.malisis.doors.MalisisDoors;
+import net.malisis.doors.bigdoors.Door3x3Tile;
 import net.malisis.doors.tileentity.DoorFactoryTileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -70,6 +71,7 @@ public class DoorFactoryMessage implements IMalisisMessageHandler<DoorFactoryMes
 			te.setDoubleDoor(message.doubleDoor);
 			te.setProximityDetection(message.proximityDetection);
 			te.setCode(message.code);
+			te.setBigDoorWood(Door3x3Tile.woodFromName(message.bigDoorWood));
 		}
 		else
 			te.createDoor();
@@ -105,6 +107,7 @@ public class DoorFactoryMessage implements IMalisisMessageHandler<DoorFactoryMes
 		private boolean doubleDoor;
 		private boolean proximityDetection;
 		private String code;
+		private String bigDoorWood;
 
 		public Packet()
 		{}
@@ -129,6 +132,7 @@ public class DoorFactoryMessage implements IMalisisMessageHandler<DoorFactoryMes
 			this.doubleDoor = te.isDoubleDoor();
 			this.proximityDetection = te.hasProximityDetection();
 			this.code = te.getCode();
+			this.bigDoorWood = te.getBigDoorWood() != null ? te.getBigDoorWood().getName() : null;
 		}
 
 		@Override
@@ -151,6 +155,7 @@ public class DoorFactoryMessage implements IMalisisMessageHandler<DoorFactoryMes
 				doubleDoor = buf.readBoolean();
 				proximityDetection = buf.readBoolean();
 				code = ByteBufUtils.readUTF8String(buf);
+				bigDoorWood = ByteBufUtils.readUTF8String(buf);
 			}
 		}
 
@@ -170,6 +175,7 @@ public class DoorFactoryMessage implements IMalisisMessageHandler<DoorFactoryMes
 				buf.writeBoolean(doubleDoor);
 				buf.writeBoolean(proximityDetection);
 				ByteBufUtils.writeUTF8String(buf, code != null ? code : "");
+				ByteBufUtils.writeUTF8String(buf, bigDoorWood != null ? bigDoorWood : "");
 			}
 		}
 

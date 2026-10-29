@@ -24,6 +24,7 @@
 
 package net.malisis.doors.gui;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -61,8 +62,11 @@ import net.malisis.doors.DoorDescriptor.RedstoneBehavior;
 import net.malisis.doors.DoorRegistry;
 import net.malisis.doors.MalisisDoors;
 import net.malisis.doors.bigdoors.BigDoorSettings;
+import net.malisis.doors.bigdoors.Door3x3;
+import net.malisis.doors.bigdoors.Door3x3Tile;
 import net.malisis.doors.network.DoorFactoryMessage;
 import net.malisis.doors.tileentity.DoorFactoryTileEntity;
+import net.minecraft.block.BlockPlanks;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.ResourceLocation;
@@ -95,6 +99,10 @@ public class DoorFactoryGui extends MalisisGui
 	private Digicode digicode;
 	//in place of the movement for big doors, which have their own
 	private UILabel lblBigDoorMovement;
+	//the wood of wooden 3x3 doors, or the blocks around them
+	private UISelect<String> selBigDoorWood;
+	private UILabel lblBigDoorWood;
+	private static final String WOOD_AROUND = "around";
 	//why the door can't be created or modified: next to the output after clicking the button, and in its tooltip
 	private UILabel lblProblem;
 	private String shownProblem;
@@ -261,6 +269,16 @@ public class DoorFactoryGui extends MalisisGui
 		contEdit.add(new UILabel(this, "gui.door_factory.door_edit_slot").setPosition(0, 23));
 		contEdit.add(doorEditSlotSlot);
 
+		//wooden 3x3 doors only
+		List<String> woods = Lists.newArrayList(WOOD_AROUND);
+		for (BlockPlanks.EnumType wood : Door3x3Tile.WOODS)
+			woods.add(wood.getName());
+		selBigDoorWood = new UISelect<>(this, 80, woods).setPosition(-4, 42, Anchor.RIGHT);
+		selBigDoorWood.setLabelPattern("gui.door_factory.big_door_wood.%s").register(this);
+		lblBigDoorWood = new UILabel(this, "gui.door_factory.big_door_wood").setPosition(0, 44);
+		contEdit.add(lblBigDoorWood);
+		contEdit.add(selBigDoorWood);
+
 		matContainer.add(contCreate);
 		matContainer.add(contEdit);
 
@@ -285,6 +303,9 @@ public class DoorFactoryGui extends MalisisGui
 		selDoorMovement.setVisible(!bigDoor);
 		lblBigDoorMovement.setVisible(bigDoor);
 		cbDoubleDoor.setEnabled(!bigDoor);
+		boolean woodenDoor = !tileEntity.isCreate() && Door3x3.isWooden(tileEntity.doorEditSlot.getItemStack());
+		selBigDoorWood.setVisible(woodenDoor);
+		lblBigDoorWood.setVisible(woodenDoor);
 
 		//the reason the button does nothing: in its tooltip, and shown next to the output for a while after it is clicked
 		String problem = tileEntity.getCreateProblem();
@@ -316,6 +337,7 @@ public class DoorFactoryGui extends MalisisGui
 		cbProximity.setChecked(tileEntity.hasProximityDetection());
 		selRedstone.select(tileEntity.getRedstoneBehavior());
 		selDoorSound.setSelectedOption(DoorRegistry.getId(tileEntity.getDoorSound()));
+		selBigDoorWood.setSelectedOption(tileEntity.getBigDoorWood() != null ? tileEntity.getBigDoorWood().getName() : WOOD_AROUND);
 	}
 
 	@Subscribe
@@ -341,6 +363,8 @@ public class DoorFactoryGui extends MalisisGui
 			tileEntity.setDoorMovement(DoorRegistry.getMovement((String) event.getNewValue()));
 		else if (event.getComponent() == selDoorSound)
 			tileEntity.setDoorSound(DoorRegistry.getSound((String) event.getNewValue()));
+		else if (event.getComponent() == selBigDoorWood)
+			tileEntity.setBigDoorWood(Door3x3Tile.woodFromName((String) event.getNewValue()));
 
 		DoorFactoryMessage.sendDoorInformations(tileEntity);
 	}
