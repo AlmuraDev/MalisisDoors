@@ -107,7 +107,15 @@ public class Digicode extends UIContainer
 
 	private UIButton button(String key, int x, int y, int h)
 	{
-		UIButton button = new UIButton(key);
+		UIButton button = new UIButton(key)
+		{
+			//mouse only: enter would press the hovered button, and the mouse starts over the 5
+			@Override
+			public boolean onKeyTyped(char keyChar, int keyCode)
+			{
+				return false;
+			}
+		};
 		button.setSize(16, h);
 		button.setPosition(x, y);
 		button.setName(key);
@@ -158,6 +166,8 @@ public class Digicode extends UIContainer
 					getGui().close();
 					DigicodeMessage.send(((DigicodeGui) getGui()).te);
 				}
+				else
+					setEnteredCode("");
 				break;
 			default:
 				setEnteredCode(enteredCode + key);

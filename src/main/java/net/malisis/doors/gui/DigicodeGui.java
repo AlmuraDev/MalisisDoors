@@ -76,6 +76,8 @@ public class DigicodeGui extends MalisisGui
 				close();
 				DigicodeMessage.send(te);
 			}
+			else
+				digicode.setEnteredCode("");
 		}
 	}
 }
